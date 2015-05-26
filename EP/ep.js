@@ -30,14 +30,14 @@ EP.all = function(promises) {
 		locked;
 
 	for (var i = 0; i < len; i++) {
-		promises[i].then(function(val) {
+		promises[i].then((function(i){return function(val) {
 			v[i] = val; // 将返回值正确的塞进数组
 			pending++; // 计数器++
 
-			if (!lock && len === pending) {
+			if (!locked && len === pending) {
 				ep.resolve(v);
 			}
-		}).catch(function(reason) {
+		}})(i)).catch(function(reason) {
 			locked = true; // 执行reject
 			ep.reject(reason);
 		});
@@ -61,6 +61,7 @@ EP.any = function(promises) {
 			ep.reject(reason);
 		});
 	}
+	return ep;
 };
 
 EP.prototype.then = function(onFulfilled, onRejected) {
