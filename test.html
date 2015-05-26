@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Test</title>
+	<script type="text/javascript" src="ep.js"></script>
+</head>
+<body>
+	<button id="btn">开始测试</button>
+	<script type="text/javascript">
+	var a = new EP();
+
+	a.then(function(v) {
+		console.log('开始测试', v);
+	}).delay(5000).then(function() {
+		console.log('延迟了五秒钟才执行的');
+	}).delay(2000).then(function() {
+		var i = 0;
+		return setInterval(function() {
+			console.log(i++);
+		}, 400);
+	}).delay(5000).then(function(tid) {
+		clearInterval(tid);
+		console.log('结束tid：' + tid);
+	}).then(function(tid) {
+		console.log('tid:' + tid);
+		return 5;
+	}).then(function(v) {
+		console.log(v);
+	});
+
+	var b = new EP(function(resolve) {
+		setTimeout(function() {
+			resolve(2000);
+		}, 2000);
+	});
+
+	var c = new EP(function(resolve) {
+		setTimeout(function() {
+			resolve(5000);
+		}, 5000);
+	});
+
+	EP.any([b, c]).then(function(v) {
+		console.log(v);
+	});
+
+	document.querySelector('#btn').addEventListener('click', function() {
+		a.resolve(2);
+	});
+	</script>
+</body>
+</html>
