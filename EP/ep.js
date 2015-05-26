@@ -199,6 +199,7 @@ function resolvePromise(ep1, ep2) {
 	return ep1;
 }
 
+
 function resolveThen(ep, thenable) {
 	var flag = false;
 	var resolve = once(function(v) {
