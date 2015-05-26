@@ -25,6 +25,23 @@ var EP = function(resolver) {
 	isFn(resolver) && resolver(this.resolve.bind(this), this.reject.bind(this));
 };
 
+EP.resolve = function(arg) {
+	var ep = new EP();
+
+	if (isThenable(arg)) {
+		return resolveThen(ep, arg);
+	} else {
+		return ep.resolve(arg);
+	}
+};
+
+EP.reject = function(arg) {
+	var ep = new EP();
+	ep.reject(arg);
+	
+	return ep;
+};
+
 EP.prototype.then = function(onFulfilled, onRejected) {
 	var next = this._next || (this._next = EP()); // 形成链式引用，将promise关联起来
 	var status = this._status;
@@ -83,7 +100,58 @@ EP.prototype.reject = function(reason) {
 	this._rejects.length && fireAll(this);
 
 	return this;
-}
+};
+
+// 语法糖
+EP.prototype.catch = function(onRejected) {
+	return this.then(void 0, onRejected);
+};
+
+/**
+ * [all 接收一个promise对象数组]
+ * @param  {[type]} promises
+ * @return {[type]}
+ */
+EP.prototype.all = function(promises) {
+	var len = promises.length,
+		ep = new EP(), // 用于返回的新promise对象
+		v = [], // 返回结果
+		pending = 0, // 表示当前执行完成的个数
+		locked;
+
+	for (var i = 0; i < len; i++) {
+		promises[i].then(function(val) {
+			v[i] = val; // 将返回值正确的塞进数组
+			pending++; // 计数器++
+
+			if (!lock && len === pending) {
+				ep.resolve(v);
+			}
+		}).catch(function(reason) {
+			locked = true; // 报错了就不能执行resolve了
+			ep.reject(reason);
+		});
+	}
+
+	return ep;
+};
+
+EP.prototype.any = function(promises) {
+	var ep = new EP(),
+		flag;
+
+	for (var i = 0, l = promises.length; i < l; i++) {
+		promises[i].then(function(v) {
+			if (!flag) {
+				flag = true;
+				ep.resolve(v);
+			}
+		}).catch(function(reason) {
+			flag = true;
+			ep.reject(reason);
+		});
+	}
+};
 
 function fireAll(ep) {
 	var status = ep._status;
@@ -92,9 +160,9 @@ function fireAll(ep) {
 	var fn;
 	var v;
 
-	while (fn = queue.shift()) {
+	while (fn = queue.shift()) { // 按照队列的思想，先进先出，保持了then链的执行顺序
 		v = fn.call(ep, arg) || arg;
-		resolveV(ep._next, v);
+		resolveV(ep._next, v); // 对返回的值进行分类处理
 	}
 
 	return ep;
@@ -109,8 +177,10 @@ function resolveV(ep, v) {
 		// 如果上一步的返回值是一个Promise对象，那么需要等这个Promise对象的状态变化后才能继续执行
 		return resolvePromise(ep, v);
 	} else if (isThenable(v)) {
+		// 如果是一个thenable对象特殊处理
 		return resolveThen(ep, v);
 	} else {
+		// 普通的返回值直接进行递归调用就ok
 		return ep.resolve(v);
 	}
 }
