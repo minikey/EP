@@ -2,14 +2,6 @@ var PENDING = 'pending';
 var FULFILLED = 'fulfiled';
 var REJECTED = 'rejected';
 
-function isThenable(obj) {
-	return obj && obj.then && isFn(obj.then);
-}
-
-function isFn(fn) {
-	return typeof fn === 'function';
-}
-
 var EP = function(resolver) {
 	if (!(this instanceof EP)) {
 		return new EP(resolver);
@@ -23,23 +15,6 @@ var EP = function(resolver) {
 	ep._rejects = [];
 
 	isFn(resolver) && resolver(this.resolve.bind(this), this.reject.bind(this));
-};
-
-EP.resolve = function(arg) {
-	var ep = new EP();
-
-	if (isThenable(arg)) {
-		return resolveThen(ep, arg);
-	} else {
-		return ep.resolve(arg);
-	}
-};
-
-EP.reject = function(arg) {
-	var ep = new EP();
-	ep.reject(arg);
-	
-	return ep;
 };
 
 /**
@@ -152,6 +127,48 @@ EP.prototype.reject = function(reason) {
 EP.prototype.catch = function(onRejected) {
 	return this.then(void 0, onRejected);
 };
+
+EP.prototype.delay = function(time) {
+	return this.then(function(val) {
+		var ep = EP.delay(time, val);
+		return ep;
+	});
+};
+
+EP.resolve = function(arg) {
+	var ep = new EP();
+
+	if (isThenable(arg)) {
+		return resolveThen(ep, arg);
+	} else {
+		return ep.resolve(arg);
+	}
+};
+
+EP.reject = function(arg) {
+	var ep = new EP();
+	ep.reject(arg);
+	
+	return ep;
+};
+
+EP.delay = function(time, val) {
+	var ep = new EP(function(resolve) {
+		setTimeout(function() {
+			resolve(val);
+		}, time);
+	});
+
+	return ep;
+};
+
+function isThenable(obj) {
+	return obj && obj.then && isFn(obj.then);
+}
+
+function isFn(fn) {
+	return typeof fn === 'function';
+}
 
 function fireAll(ep) {
 	var status = ep._status;
