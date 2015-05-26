@@ -128,7 +128,7 @@ EP.prototype.all = function(promises) {
 				ep.resolve(v);
 			}
 		}).catch(function(reason) {
-			locked = true; // 报错了就不能执行resolve了
+			locked = true; // 执行reject
 			ep.reject(reason);
 		});
 	}
