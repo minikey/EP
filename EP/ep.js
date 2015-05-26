@@ -42,6 +42,52 @@ EP.reject = function(arg) {
 	return ep;
 };
 
+/**
+ * [all 接收一个promise对象数组]
+ * @param  {[type]} promises
+ * @return {[type]}
+ */
+EP.all = function(promises) {
+	var len = promises.length,
+		ep = new EP(), // 用于返回的新promise对象
+		v = [], // 返回结果
+		pending = 0, // 表示当前执行完成的个数
+		locked;
+
+	for (var i = 0; i < len; i++) {
+		promises[i].then(function(val) {
+			v[i] = val; // 将返回值正确的塞进数组
+			pending++; // 计数器++
+
+			if (!lock && len === pending) {
+				ep.resolve(v);
+			}
+		}).catch(function(reason) {
+			locked = true; // 执行reject
+			ep.reject(reason);
+		});
+	}
+
+	return ep;
+};
+
+EP.any = function(promises) {
+	var ep = new EP(),
+		flag;
+
+	for (var i = 0, l = promises.length; i < l; i++) {
+		promises[i].then(function(v) {
+			if (!flag) {
+				flag = true;
+				ep.resolve(v);
+			}
+		}).catch(function(reason) {
+			flag = true;
+			ep.reject(reason);
+		});
+	}
+};
+
 EP.prototype.then = function(onFulfilled, onRejected) {
 	var next = this._next || (this._next = EP()); // 形成链式引用，将promise关联起来
 	var status = this._status;
@@ -105,52 +151,6 @@ EP.prototype.reject = function(reason) {
 // 语法糖
 EP.prototype.catch = function(onRejected) {
 	return this.then(void 0, onRejected);
-};
-
-/**
- * [all 接收一个promise对象数组]
- * @param  {[type]} promises
- * @return {[type]}
- */
-EP.prototype.all = function(promises) {
-	var len = promises.length,
-		ep = new EP(), // 用于返回的新promise对象
-		v = [], // 返回结果
-		pending = 0, // 表示当前执行完成的个数
-		locked;
-
-	for (var i = 0; i < len; i++) {
-		promises[i].then(function(val) {
-			v[i] = val; // 将返回值正确的塞进数组
-			pending++; // 计数器++
-
-			if (!lock && len === pending) {
-				ep.resolve(v);
-			}
-		}).catch(function(reason) {
-			locked = true; // 执行reject
-			ep.reject(reason);
-		});
-	}
-
-	return ep;
-};
-
-EP.prototype.any = function(promises) {
-	var ep = new EP(),
-		flag;
-
-	for (var i = 0, l = promises.length; i < l; i++) {
-		promises[i].then(function(v) {
-			if (!flag) {
-				flag = true;
-				ep.resolve(v);
-			}
-		}).catch(function(reason) {
-			flag = true;
-			ep.reject(reason);
-		});
-	}
 };
 
 function fireAll(ep) {
