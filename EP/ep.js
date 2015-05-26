@@ -103,7 +103,7 @@ EP.prototype.then = function(onFulfilled, onRejected) {
 			next.resolve(onFulfilled);
 		} else {
 			try {
-				v = onFulfilled(this._value);
+				v = onFulfilled(this._value) || this._value;
 				resolveV(next, v);
 			} catch (e) {
 				this.reject(e);
@@ -114,7 +114,7 @@ EP.prototype.then = function(onFulfilled, onRejected) {
 			next.reject(onRejected);
 		} else {
 			try {
-				v = onRejected(this._reason);
+				v = onRejected(this._reason) || this._reason;
 				resolveV(next, v);
 			} catch (e) {
 				this.reject(e);
